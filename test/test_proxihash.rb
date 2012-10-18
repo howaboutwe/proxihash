@@ -7,153 +7,246 @@ require 'proxihash'
 describe Proxihash do
   describe '.encode' do
     it "returns a proxihash for the given lat/lng at the given precision" do
-      Proxihash.encode(0, 0, 2).must_equal 'f_'
+      Proxihash.encode(0, 0, 8).must_equal Proxihash.new(0b00111111, 8)
     end
 
-    it "returns a 5-char proxihash by default" do
-      Proxihash.encode(0, 0).must_equal 'f____'
+    it "returns a sub-mile (30-bit) proxihash by default" do
+      Proxihash.encode(0, 0).must_equal Proxihash.new(0x0f_ff_ff_ff, 30)
     end
 
     it "computes the proxihash correctly" do
-      # 01-10-01 00-11-11 = pf
-      Proxihash.encode(-35.15625, 64.6875, 2).must_equal 'pf'
+      Proxihash.encode(-35.15625, 64.6875, 12).must_equal Proxihash.new(0b01_10_01_00_11_11, 12)
     end
   end
 
-  describe '.decode' do
-    it "returns the lat/lng for the center of the given proxihash's tile" do
-      Proxihash.decode('00').must_equal [-88.59375, -177.1875]
-      Proxihash.decode('000').must_equal [-89.82421875, -179.6484375]
-    end
-
-    it "computes the lat/lng correctly" do
-      # 01-10-01 00-11-11 = pf
-      Proxihash.decode('pf').must_equal [-35.15625, 64.6875]
-    end
-  end
-
-  describe 'roundtripping' do
-    it "returns the original lat/lng if the lat/lng is in the center of a tile" do
-      proxihash = Proxihash.encode(-35.15625, 64.6875, 2)
-      Proxihash.decode(proxihash).must_equal [-35.15625, 64.6875]
-    end
-
-    it "returns the center of the tile of the given lat/lng" do
-      proxihash = Proxihash.encode(-35, 65, 2)
-      Proxihash.decode(proxihash).must_equal [-35.15625, 64.6875]
-    end
-  end
-
-  describe ".tile" do
-    it "returns the lat/lng ranges of the given proxihash's tile" do
-      Proxihash.tile('pf').must_equal [-36.5625, -33.75, 61.875, 67.5]
-    end
-  end
-
-  describe ".tiles_for_search" do
-    describe "when in 1st quadrant of center tile" do
+  describe ".search_tiles" do
+    describe "when in the 1st quadrant of a tile" do
       it "returns the center tile and the 3 neighbors to the top and right" do
-        Proxihash.tiles_for_search(12.9, 25.7, 48.64).to_set.must_equal Set['NNN','NNO','NNP','NNQ']
+        center = Proxihash.new(0xc000, 16)
+        Proxihash.search_tiles(0.352, 0.704, 97).to_set.must_equal Set[
+          center, center.neighbor(1, 0), center.neighbor(1, 1), center.neighbor(0, 1)
+        ]
       end
     end
 
-    describe "when in 2nd quadrant of center tile" do
+    describe "when in the 2nd quadrant of a tile" do
       it "returns the center tile and the 3 neighbors to the top and left" do
-        Proxihash.tiles_for_search(12.9, 25.6, 48.64).to_set.must_equal Set['NNN','NNC','NNE','NNP']
+        center = Proxihash.new(0xc000, 16)
+        Proxihash.search_tiles(0.352, 0.703, 97).to_set.must_equal Set[
+          center, center.neighbor(1, 0), center.neighbor(1, -1), center.neighbor(0, -1)
+        ]
       end
     end
 
-    describe "when in 3rd quadrant of center tile" do
+    describe "when in the 3rd quadrant of a tile" do
       it "returns the center tile and the 3 neighbors to the bottom and left" do
-        Proxihash.tiles_for_search(12.8, 25.6, 48.64).to_set.must_equal Set['NNN','NNC','NNf','NNq']
+        center = Proxihash.new(0xc000, 16)
+        Proxihash.search_tiles(0.351, 0.703, 97).to_set.must_equal Set[
+          center, center.neighbor(0, -1), center.neighbor(-1, -1), center.neighbor(-1, 0)
+        ]
       end
     end
 
-    describe "when in 4th quadrant of center tile" do
+    describe "when in the 4th quadrant of a tile" do
       it "returns the center tile and the 3 neighbors to the bottom and right" do
-        Proxihash.tiles_for_search(12.8, 25.7, 48.64).to_set.must_equal Set['NNN','NNO','NNq','NNr']
+        center = Proxihash.new(0xc000, 16)
+        Proxihash.search_tiles(0.351, 0.704, 97).to_set.must_equal Set[
+          center, center.neighbor(-1, 0), center.neighbor(-1, 1), center.neighbor(0, 1)
+        ]
       end
     end
 
-    describe "higher-radius search" do
+    describe "larger-radius search" do
       it "returns shorter proxihashes" do
-        Proxihash.tiles_for_search(12.66, 25.32, 389.0).to_set.must_equal Set['NN','NO','NP','NQ']
+        center = Proxihash.new(0x3000, 14)
+        Proxihash.search_tiles(0.704, 1.407, 98).to_set.must_equal Set[
+          center, center.neighbor(1, 0), center.neighbor(1, 1), center.neighbor(0, 1)
+        ]
       end
     end
 
     describe "lower-radius search" do
       it "returns longer proxihashes" do
-        Proxihash.tiles_for_search(12.86, 25.71, 6.0).to_set.must_equal Set['NNNN','NNNO','NNNP','NNNQ']
+        center = Proxihash.new(0x30000, 18)
+        Proxihash.search_tiles(0.176, 0.352, 48).to_set.must_equal Set[
+          center, center.neighbor(1, 0), center.neighbor(1, 1), center.neighbor(0, 1)
+        ]
       end
     end
   end
 
-  describe ".neighbor" do
-    Proxihash.singleton_class.send :public, :neighbor
+  describe '.lng_bits' do
+    Proxihash.singleton_class.send :public, :lng_bits
 
-    describe "from the center tile" do
-      it "returns the tile in the given direction" do
-        Proxihash.neighbor('ccc', -1, -1).must_equal 'cc3'
-        Proxihash.neighbor('ccc', -1,  0).must_equal 'cc6'
-        Proxihash.neighbor('ccc', -1,  1).must_equal 'cc7'
+    it "is higher toward the poles" do
+      Proxihash.lng_bits(  0, 48.63).must_equal 9
+      Proxihash.lng_bits( 60, 48.63).must_equal 8
+      Proxihash.lng_bits(-60, 48.63).must_equal 8
+    end
 
-        Proxihash.neighbor('ccc',  0, -1).must_equal 'cc9'
-        Proxihash.neighbor('ccc',  0,  0).must_equal 'ccc'
-        Proxihash.neighbor('ccc',  0,  1).must_equal 'ccd'
+    it "is lower for larger radii" do
+      Proxihash.lng_bits(0, 48.63).must_equal 9
+      Proxihash.lng_bits(0, 48.64).must_equal 8
+    end
 
-        Proxihash.neighbor('ccc',  1, -1).must_equal 'ccb'
-        Proxihash.neighbor('ccc',  1,  0).must_equal 'cce'
-        Proxihash.neighbor('ccc',  1,  1).must_equal 'ccf'
+    it "raises a PoleWrapException if the search circle overlaps a pole" do
+      Proxihash.lng_bits( 60, 2075)
+      ->{ Proxihash.lng_bits( 60, 2076) }.must_raise Proxihash::PoleWrapException
+
+      Proxihash.lng_bits(-60, 2075)
+      ->{ Proxihash.lng_bits(-60, 2076) }.must_raise Proxihash::PoleWrapException
+    end
+
+    it "raises a PoleWrapException at either pole" do
+      ->{ Proxihash.lng_bits( 90, 0.1) }.must_raise Proxihash::PoleWrapException
+      ->{ Proxihash.lng_bits(-90, 0.1) }.must_raise Proxihash::PoleWrapException
+    end
+
+    it "raises an ArgumentError if the radius is zero" do
+      ->{ Proxihash.lng_bits(0, 0) }.must_raise ArgumentError
+    end
+  end
+
+  describe '#decode' do
+    it "returns the lat/lng for the center of the given proxihash's tile" do
+      Proxihash.new(0, 12).decode.must_equal [-88.59375, -177.1875]
+      Proxihash.new(0, 18).decode.must_equal [-89.82421875, -179.6484375]
+    end
+
+    it "computes the lat/lng correctly" do
+      Proxihash.new(0b01_10_01_00_11_11, 12).decode.must_equal [-35.15625, 64.6875]
+    end
+  end
+
+  describe "#tile" do
+    it "returns the lat/lng ranges of the given proxihash's tile" do
+      Proxihash.new(0b01_10_01_00_11_11, 12).tile.must_equal [-36.5625, -33.75, 61.875, 67.5]
+    end
+  end
+
+  describe "#neighbor" do
+    describe "to the north" do
+      it "increments the latitude" do
+        Proxihash.new(0b00_00, 4).neighbor(1, 0).must_equal Proxihash.new(0b00_10, 4)
+      end
+
+      it "carries the 1 as necessary" do
+        Proxihash.new(0b00_00_10_10, 8).neighbor(1, 0).must_equal Proxihash.new(0b00_10_00_00, 8)
+      end
+
+      it "raises a PoleWrapException at the north pole" do
+        ->{ Proxihash.new(0b11_10_11_10, 8).neighbor(1, 0) }.must_raise Proxihash::PoleWrapException
       end
     end
 
-    describe "partially recursive case" do
-      it "returns the right hash when incrementing the latitude" do
-        Proxihash.neighbor('cc_', 1, 0).must_equal 'cel'
+    describe "to the south" do
+      it "decrements the latitude" do
+        Proxihash.new(0b11_11, 4).neighbor(-1, 0).must_equal Proxihash.new(0b11_01, 4)
       end
 
-      it "returns the right hash when decrementing the latitude" do
-        Proxihash.neighbor('cc0', -1, 0).must_equal 'c6H'
+      it "borrows a 1 as necessary" do
+        Proxihash.new(0b11_11_01_01, 8).neighbor(-1, 0).must_equal Proxihash.new(0b11_01_11_11, 8)
       end
 
-      it "returns the right hash when incrementing the longitude" do
-        Proxihash.neighbor('cc_', 0, 1).must_equal 'cdH'
-      end
-
-      it "returns the right hash when decrementing the longitude" do
-        Proxihash.neighbor('cc0', 0, -1).must_equal 'c9l'
+      it "raises a PoleWrapException at the south pole" do
+        ->{ Proxihash.new(0b01_00_01_00, 8).neighbor(-1, 0) }.must_raise Proxihash::PoleWrapException
       end
     end
 
-    describe "wrapping around lat/lng = 0" do
-      it "raises an exception if we wrap around the north pole" do
-        ->{ Proxihash.neighbor('000', -1, 0) }.must_raise(Proxihash::PoleWrapException)
+    describe "to the east" do
+      it "increments the longitude" do
+        Proxihash.new(0b00_00, 4).neighbor(0, 1).must_equal Proxihash.new(0b00_01, 4)
       end
 
-      it "raises an exception if we wrap around the south pole" do
-        ->{ Proxihash.neighbor('___', 1, 0) }.must_raise(Proxihash::PoleWrapException)
+      it "carries the 1 as necessary" do
+        Proxihash.new(0b00_00_01_01, 8).neighbor(0, 1).must_equal Proxihash.new(0b00_01_00_00, 8)
       end
 
-      it "wraps around succesfully when incrementing past the prime meridian" do
-        Proxihash.neighbor('lll', 0, 1).must_equal '000'
-      end
-
-      it "wraps around succesfully when decrementing past the prime meridian" do
-        Proxihash.neighbor('000', 0, -1).must_equal 'lll'
+      it "wraps around at the prime meridian" do
+        Proxihash.new(0b11_01_11_01, 8).neighbor(0, 1).must_equal Proxihash.new(0b10_00_10_00, 8)
       end
     end
 
+    describe "to the west" do
+      it "decrements the longitude" do
+        Proxihash.new(0b11_11, 4).neighbor(0, -1).must_equal Proxihash.new(0b11_10, 4)
+      end
+
+      it "borrows a 1 as necessary" do
+        Proxihash.new(0b11_11_10_10, 8).neighbor(0, -1).must_equal Proxihash.new(0b11_10_11_11, 8)
+      end
+
+      it "wraps around at the prime meridian" do
+        Proxihash.new(0b10_00_10_00, 8).neighbor(0, -1).must_equal Proxihash.new(0b11_01_11_01, 8)
+      end
+    end
+
+    describe "to the north-east" do
+      it "increments both latitude and longitude" do
+        Proxihash.new(0b00_00, 4).neighbor(1, 1).must_equal Proxihash.new(0b00_11, 4)
+      end
+    end
+
+    describe "to the north-west" do
+      it "increments the latitude, decrements the longitude" do
+        Proxihash.new(0b00_01, 4).neighbor(1, -1).must_equal Proxihash.new(0b00_10, 4)
+      end
+    end
+
+    describe "to the south-east" do
+      it "decrements the latitude, increments the longitude" do
+        Proxihash.new(0b00_10, 4).neighbor(-1, 1).must_equal Proxihash.new(0b00_01, 4)
+      end
+    end
+
+    describe "to the south-west" do
+      it "decrements both latitude and longitude" do
+        Proxihash.new(0b11_11, 4).neighbor(-1, -1).must_equal Proxihash.new(0b11_00, 4)
+      end
+    end
+
+    describe "when both arguments are zero" do
+      it "returns itself" do
+        Proxihash.new(0b00_00, 4).neighbor(0, 0).must_equal Proxihash.new(0b00_00, 4)
+      end
+    end
+  end
+
+  describe "#inspect" do
+    it "shows the raw binary string to the correct precision" do
+      Proxihash.new(0b0011001100, 10).inspect.must_equal 'Proxihash[0011001100]'
+    end
+  end
+
+  describe "#hash and #eql?" do
+    it "allows proxihashes to be used as hash keys" do
+      hash = {}
+      hash[Proxihash.new(0b0011001100, 10)] = 1
+      hash[Proxihash.new(0b0011001100, 10)] = 2
+      hash[Proxihash.new(0b0011001100, 10)].must_equal 2
+    end
+
+    it "does not treat Proxihashes with different precisions as the same hash key" do
+      hash = {}
+      hash[Proxihash.new(0b0011001100, 10)] = 1
+      hash[Proxihash.new(0b0011001100,  9)] = 2
+      hash[Proxihash.new(0b0011001100, 10)].must_equal 1
+    end
+  end
+
+  describe "tile adjacency" do
     it "returns tiles whose bounding boxes border the given tile" do
-      mc = Proxihash.tile('ccc')
+      tile = Proxihash.new(0b11_00, 4)
 
-      tl = Proxihash.tile(Proxihash.neighbor('ccc',  1, -1))
-      tc = Proxihash.tile(Proxihash.neighbor('ccc',  1,  0))
-      tr = Proxihash.tile(Proxihash.neighbor('ccc',  1,  1))
-      ml = Proxihash.tile(Proxihash.neighbor('ccc',  0, -1))
-      mr = Proxihash.tile(Proxihash.neighbor('ccc',  0,  1))
-      bl = Proxihash.tile(Proxihash.neighbor('ccc', -1, -1))
-      bc = Proxihash.tile(Proxihash.neighbor('ccc', -1,  0))
-      br = Proxihash.tile(Proxihash.neighbor('ccc', -1,  1))
+      tl = tile.neighbor( 1, -1).tile
+      tc = tile.neighbor( 1,  0).tile
+      tr = tile.neighbor( 1,  1).tile
+      ml = tile.neighbor( 0, -1).tile
+      mc = tile.neighbor( 0,  0).tile
+      mr = tile.neighbor( 0,  1).tile
+      bl = tile.neighbor(-1, -1).tile
+      bc = tile.neighbor(-1,  0).tile
+      br = tile.neighbor(-1,  1).tile
 
       tl[0].must_be_close_to ml[1]
       tc[0].must_be_close_to mc[1]
@@ -188,35 +281,15 @@ describe Proxihash do
     end
   end
 
-  describe '.bits_for_search' do
-    Proxihash.singleton_class.send :public, :bits_for_search
-
-    it "is higher toward the poles" do
-      Proxihash.bits_for_search(  0, 48.63).must_equal 9
-      Proxihash.bits_for_search( 60, 48.63).must_equal 8
-      Proxihash.bits_for_search(-60, 48.63).must_equal 8
+  describe 'roundtripping' do
+    it "returns the original lat/lng if the lat/lng is in the center of a tile" do
+      proxihash = Proxihash.encode(-35.15625, 64.6875, 12)
+      proxihash.decode.must_equal [-35.15625, 64.6875]
     end
 
-    it "is lower for larger radii" do
-      Proxihash.bits_for_search(0, 48.63).must_equal 9
-      Proxihash.bits_for_search(0, 48.64).must_equal 8
-    end
-
-    it "raises a PoleWrapException if the search circle overlaps a pole" do
-      Proxihash.bits_for_search( 60, 2075)
-      ->{ Proxihash.bits_for_search( 60, 2076) }.must_raise Proxihash::PoleWrapException
-
-      Proxihash.bits_for_search(-60, 2075)
-      ->{ Proxihash.bits_for_search(-60, 2076) }.must_raise Proxihash::PoleWrapException
-    end
-
-    it "raises a PoleWrapException at either pole" do
-      ->{ Proxihash.bits_for_search( 90, 0.1) }.must_raise Proxihash::PoleWrapException
-      ->{ Proxihash.bits_for_search(-90, 0.1) }.must_raise Proxihash::PoleWrapException
-    end
-
-    it "raises an ArgumentError if the radius is zero" do
-      ->{ Proxihash.bits_for_search(0, 0) }.must_raise ArgumentError
+    it "returns the center of the tile of the given lat/lng" do
+      proxihash = Proxihash.encode(-35, 65, 12)
+      proxihash.decode.must_equal [-35.15625, 64.6875]
     end
   end
 end

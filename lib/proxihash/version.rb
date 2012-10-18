@@ -1,4 +1,4 @@
-module Proxihash
+class Proxihash
   VERSION = [0, 0, 0]
 
   class << VERSION
