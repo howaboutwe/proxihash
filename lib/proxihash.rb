@@ -85,32 +85,6 @@ class Proxihash
       dlng = Math.asin(Math.sin(0.5*distance/Proxihash.radius)/Math.cos(lat))
       Math.log2(Math::PI/dlng.abs).ceil - 1
     end
-
-    def bump(bytes, mask, inc_map, dec_map, direction, i = bytes.size - 1)
-      return bytes if direction == 0
-      map = direction > 0 ? inc_map : dec_map
-      byte = bytes[i]
-      bits = map[byte & mask]
-      if bits
-        bytes[i] = (byte & ~mask) | bits
-      elsif i == 0
-        if mask == LAT_MASK
-          raise PoleWrapException, "can't wrap around pole"
-        elsif direction > 0
-          bytes[i] &= ~mask
-        else
-          bytes[i] |= mask
-        end
-      else
-        bytes = bump(bytes, mask, inc_map, dec_map, direction, i-1)
-        if direction > 0
-          bytes[i] &= ~mask
-        else
-          bytes[i] |= mask
-        end
-      end
-      bytes
-    end
   end
 
   def decode
