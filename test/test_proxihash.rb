@@ -5,6 +5,22 @@ require 'set'
 require 'proxihash'
 
 describe Proxihash do
+  describe '.new' do
+    it "creates a Proxihash with the given value and number of bits" do
+      proxihash = Proxihash.new(0b0011, 4)
+      proxihash.value.must_equal 0b0011
+      proxihash.num_bits.must_equal 4
+    end
+
+    it "raises an ArgumentError if the value is too large for the number of bits" do
+      ->{ Proxihash.new(0b0100, 2) }.must_raise ArgumentError
+    end
+
+    it "raises an ArgumentError if the number of bits is odd" do
+      ->{ Proxihash.new(0b100, 3) }.must_raise ArgumentError
+    end
+  end
+
   describe '.encode' do
     it "returns a proxihash for the given lat/lng at the given precision" do
       Proxihash.encode(0, 0, 8).must_equal Proxihash.new(0b00111111, 8)
@@ -229,7 +245,7 @@ describe Proxihash do
     it "does not treat Proxihashes with different precisions as the same hash key" do
       hash = {}
       hash[Proxihash.new(0b0011001100, 10)] = 1
-      hash[Proxihash.new(0b0011001100,  9)] = 2
+      hash[Proxihash.new(0b0011001100,  8)] = 2
       hash[Proxihash.new(0b0011001100, 10)].must_equal 1
     end
   end

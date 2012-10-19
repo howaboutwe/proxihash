@@ -4,6 +4,10 @@ class Proxihash
   def initialize(value, num_bits)
     @value = value
     @num_bits = num_bits
+    num_bits.even? or
+      raise ArgumentError, "bitlength must be even"
+    value < 1 << num_bits or
+      raise ArgumentError, "value to large for #{num_bits} bits"
   end
 
   attr_reader :value, :num_bits
