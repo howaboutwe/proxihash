@@ -23,7 +23,7 @@ describe Proxihash do
     describe "when in the 1st quadrant of a tile" do
       it "returns the center tile and the 3 neighbors to the top and right" do
         center = Proxihash.new(0xc000, 16)
-        Proxihash.search_tiles(0.352, 0.704, 97).to_set.must_equal Set[
+        Proxihash.search_tiles(0.352, 0.704, 155).to_set.must_equal Set[
           center, center.neighbor(1, 0), center.neighbor(1, 1), center.neighbor(0, 1)
         ]
       end
@@ -32,7 +32,7 @@ describe Proxihash do
     describe "when in the 2nd quadrant of a tile" do
       it "returns the center tile and the 3 neighbors to the top and left" do
         center = Proxihash.new(0xc000, 16)
-        Proxihash.search_tiles(0.352, 0.703, 97).to_set.must_equal Set[
+        Proxihash.search_tiles(0.352, 0.703, 155).to_set.must_equal Set[
           center, center.neighbor(1, 0), center.neighbor(1, -1), center.neighbor(0, -1)
         ]
       end
@@ -41,7 +41,7 @@ describe Proxihash do
     describe "when in the 3rd quadrant of a tile" do
       it "returns the center tile and the 3 neighbors to the bottom and left" do
         center = Proxihash.new(0xc000, 16)
-        Proxihash.search_tiles(0.351, 0.703, 97).to_set.must_equal Set[
+        Proxihash.search_tiles(0.351, 0.703, 155).to_set.must_equal Set[
           center, center.neighbor(0, -1), center.neighbor(-1, -1), center.neighbor(-1, 0)
         ]
       end
@@ -50,7 +50,7 @@ describe Proxihash do
     describe "when in the 4th quadrant of a tile" do
       it "returns the center tile and the 3 neighbors to the bottom and right" do
         center = Proxihash.new(0xc000, 16)
-        Proxihash.search_tiles(0.351, 0.704, 97).to_set.must_equal Set[
+        Proxihash.search_tiles(0.351, 0.704, 155).to_set.must_equal Set[
           center, center.neighbor(-1, 0), center.neighbor(-1, 1), center.neighbor(0, 1)
         ]
       end
@@ -59,7 +59,7 @@ describe Proxihash do
     describe "larger-radius search" do
       it "returns shorter proxihashes" do
         center = Proxihash.new(0x3000, 14)
-        Proxihash.search_tiles(0.704, 1.407, 98).to_set.must_equal Set[
+        Proxihash.search_tiles(0.704, 1.407, 157).to_set.must_equal Set[
           center, center.neighbor(1, 0), center.neighbor(1, 1), center.neighbor(0, 1)
         ]
       end
@@ -68,7 +68,7 @@ describe Proxihash do
     describe "lower-radius search" do
       it "returns longer proxihashes" do
         center = Proxihash.new(0x30000, 18)
-        Proxihash.search_tiles(0.176, 0.352, 48).to_set.must_equal Set[
+        Proxihash.search_tiles(0.176, 0.352, 78).to_set.must_equal Set[
           center, center.neighbor(1, 0), center.neighbor(1, 1), center.neighbor(0, 1)
         ]
       end
@@ -79,22 +79,22 @@ describe Proxihash do
     Proxihash.singleton_class.send :public, :lng_bits
 
     it "is higher toward the poles" do
-      Proxihash.lng_bits(  0, 48.63).must_equal 9
-      Proxihash.lng_bits( 60, 48.63).must_equal 8
-      Proxihash.lng_bits(-60, 48.63).must_equal 8
+      Proxihash.lng_bits(  0, 78.18).must_equal 9
+      Proxihash.lng_bits( 60, 78.18).must_equal 8
+      Proxihash.lng_bits(-60, 78.18).must_equal 8
     end
 
     it "is lower for larger radii" do
-      Proxihash.lng_bits(0, 48.63).must_equal 9
-      Proxihash.lng_bits(0, 48.64).must_equal 8
+      Proxihash.lng_bits(0, 78.18).must_equal 9
+      Proxihash.lng_bits(0, 78.19).must_equal 8
     end
 
     it "raises a PoleWrapException if the search circle overlaps a pole" do
-      Proxihash.lng_bits( 60, 2075)
-      ->{ Proxihash.lng_bits( 60, 2076) }.must_raise Proxihash::PoleWrapException
+      Proxihash.lng_bits( 60, 3335)
+      ->{ Proxihash.lng_bits( 60, 3336) }.must_raise Proxihash::PoleWrapException
 
-      Proxihash.lng_bits(-60, 2075)
-      ->{ Proxihash.lng_bits(-60, 2076) }.must_raise Proxihash::PoleWrapException
+      Proxihash.lng_bits(-60, 3335)
+      ->{ Proxihash.lng_bits(-60, 3336) }.must_raise Proxihash::PoleWrapException
     end
 
     it "raises a PoleWrapException at either pole" do

@@ -9,6 +9,20 @@ class Proxihash
   attr_reader :value, :num_bits
 
   class << self
+    def radius=(radius)
+      @radius =
+        case radius
+        when :earth_in_miles
+          3958.761
+        when :earth_in_kilometers
+          6371.009
+        else
+          radius
+        end
+    end
+
+    attr_reader :radius
+
     def encode(lat, lng, num_bits=30)
       lat = lat.to_f
       lng = lng.to_f
@@ -43,10 +57,10 @@ class Proxihash
       new(value, num_bits)
     end
 
-    def search_tiles(lat, lng, radius)
+    def search_tiles(lat, lng, distance)
       lat = lat.to_f
       lng = lng.to_f
-      bits = 2*lng_bits(lat, radius.to_f)
+      bits = 2*lng_bits(lat, distance.to_f)
       center = encode(lat, lng, bits)
 
       tile_lat, tile_lng = center.decode
@@ -62,13 +76,13 @@ class Proxihash
 
     private
 
-    def lng_bits(lat, radius)
+    def lng_bits(lat, distance)
       lat = Math::PI / 180.0 * lat
-      radius >= Float::EPSILON or
-        raise ArgumentError, "radius too small"
-      radius <= RADIUS_OF_EARTH_IN_MILES*(0.5*Math::PI - lat.abs) or
+      distance >= Float::EPSILON or
+        raise ArgumentError, "distance too small"
+      distance <= Proxihash.radius*(0.5*Math::PI - lat.abs) or
         raise PoleWrapException, "cannot search across pole"
-      dlng = Math.asin(Math.sin(0.5*radius/RADIUS_OF_EARTH_IN_MILES)/Math.cos(lat))
+      dlng = Math.asin(Math.sin(0.5*distance/Proxihash.radius)/Math.cos(lat))
       Math.log2(Math::PI/dlng.abs).ceil - 1
     end
 
@@ -180,5 +194,5 @@ class Proxihash
   end
 
   PoleWrapException = Class.new(ArgumentError)
-  RADIUS_OF_EARTH_IN_MILES = 3963.1676
+  self.radius = :earth_in_kilometers
 end
