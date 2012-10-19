@@ -4,8 +4,8 @@ class Proxihash
   def initialize(value, num_bits)
     @value = value
     @num_bits = num_bits
-    num_bits.even? or
-      raise ArgumentError, "bitlength must be even"
+    num_bits.odd? or
+      raise ArgumentError, "bitlength must be odd"
     value < 1 << num_bits or
       raise ArgumentError, "value to large for #{num_bits} bits"
   end
@@ -27,7 +27,7 @@ class Proxihash
 
     attr_reader :radius
 
-    def encode(lat, lng, num_bits=30)
+    def encode(lat, lng, num_bits=31)
       lat = lat.to_f
       lng = lng.to_f
 
@@ -64,7 +64,7 @@ class Proxihash
     def search_tiles(lat, lng, distance)
       lat = lat.to_f
       lng = lng.to_f
-      bits = 2*lng_bits(lat, distance.to_f)
+      bits = 2*lng_bits(lat, distance.to_f) - 1
       center = encode(lat, lng, bits)
 
       tile_lat, tile_lng = center.decode
