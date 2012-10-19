@@ -7,7 +7,7 @@ class Proxihash
     num_bits.odd? or
       raise ArgumentError, "bitlength must be odd"
     value < 1 << num_bits or
-      raise ArgumentError, "value to large for #{num_bits} bits"
+      raise ArgumentError, "value too large for #{num_bits} bits"
   end
 
   attr_reader :value, :num_bits
