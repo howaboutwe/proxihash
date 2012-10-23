@@ -234,6 +234,30 @@ describe Proxihash do
     end
   end
 
+  describe "#north" do
+    it "returns the neighbor to the north" do
+      Proxihash.new(0b0_00_00, 5).north.must_equal Proxihash.new(0b0_00_10, 5)
+    end
+  end
+
+  describe "#south" do
+    it "returns the neighbor to the south" do
+      Proxihash.new(0b1_11_11, 5).south.must_equal Proxihash.new(0b1_11_01, 5)
+    end
+  end
+
+  describe "#east" do
+    it "returns the neighbor to the east" do
+      Proxihash.new(0b0_00_00, 5).east.must_equal Proxihash.new(0b00_01, 5)
+    end
+  end
+
+  describe "#west" do
+    it "returns the neighbor to the west" do
+      Proxihash.new(0b0_11_11, 5).west.must_equal Proxihash.new(0b0_11_10, 5)
+    end
+  end
+
   describe "#inspect" do
     it "shows the raw binary string to the correct precision" do
       Proxihash.new(0b10011001100, 11).inspect.must_equal 'Proxihash[10011001100]'

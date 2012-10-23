@@ -157,6 +157,22 @@ class Proxihash
     self.class.new(value, num_bits)
   end
 
+  def north
+    neighbor(1, 0)
+  end
+
+  def south
+    neighbor(-1, 0)
+  end
+
+  def east
+    neighbor(0, 1)
+  end
+
+  def west
+    neighbor(0, -1)
+  end
+
   def ==(other)
     other.is_a?(Proxihash) && value == other.value && num_bits == other.num_bits
   end
