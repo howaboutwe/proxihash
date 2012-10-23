@@ -20,6 +20,8 @@ class Proxihash
           3958.761
         when :earth_in_kilometers
           6371.009
+        when :earth_in_meters
+          6371009
         else
           radius
         end
