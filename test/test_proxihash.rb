@@ -89,6 +89,12 @@ describe Proxihash do
         ]
       end
     end
+
+    describe "when :min_bits is given" do
+      it "returns nil if the hashes are too short" do
+        Proxihash.search_tiles(0, 0, 20, min_bits: 21).must_be_nil
+      end
+    end
   end
 
   describe '.lng_bits' do

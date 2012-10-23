@@ -80,12 +80,16 @@ class Proxihash
       new(value, num_bits)
     end
 
-    def search_tiles(lat, lng, distance)
+    def search_tiles(lat, lng, distance, options={})
       lat = lat.to_f
       lng = lng.to_f
       bits = 2*lng_bits(lat, distance.to_f) - 1
-      center = encode(lat, lng, bits)
 
+      if (min_bits = options[:min_bits]) && bits < min_bits
+        return nil
+      end
+
+      center = encode(lat, lng, bits)
       tile_lat, tile_lng = center.decode
       dlat = lat < tile_lat ? -1 : 1
       dlng = lng < tile_lng ? -1 : 1
