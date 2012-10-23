@@ -25,7 +25,26 @@ class Proxihash
         end
     end
 
-    attr_reader :radius
+    def angular_units=(units)
+      case units
+      when :radians
+        @min_lat = -Math::PI/2
+        @max_lat =  Math::PI/2
+        @min_lng = -Math::PI
+        @max_lng =  Math::PI
+      when :degrees
+        @min_lat = -90
+        @max_lat =  90
+        @min_lng = -180
+        @max_lng =  180
+      else
+        raise ArgumentError "angular units must be :radians or :degrees (#{units.inspect} given)"
+      end
+      @angular_units = units
+    end
+
+    attr_reader :radius, :angular_units
+    attr_reader :min_lat, :max_lat, :min_lng, :max_lng
 
     def encode(lat, lng, num_bits=31)
       lat = lat.to_f
@@ -33,10 +52,10 @@ class Proxihash
 
       value = 0
 
-      lat0 = -90.0
-      lat1 =  90.0
-      lng0 = -180.0
-      lng1 =  180.0
+      lat0 = min_lat
+      lat1 = max_lat
+      lng0 = min_lng
+      lng1 = max_lng
 
       (num_bits - 1).downto(0) do |i|
         if i.odd?
@@ -81,7 +100,7 @@ class Proxihash
     private
 
     def lng_bits(lat, distance)
-      lat = Math::PI / 180.0 * lat
+      lat = Math::PI / 180.0 * lat if angular_units == :degrees
       distance >= Float::EPSILON or
         raise ArgumentError, "distance too small"
       distance <= Proxihash.radius*(0.5*Math::PI - lat.abs) or
@@ -91,16 +110,20 @@ class Proxihash
     end
   end
 
+  [:min_lat, :max_lat, :min_lng, :max_lng].each do |name|
+    class_eval "def #{name}; self.class.#{name}; end"
+  end
+
   def decode
     lat0, lat1, lng0, lng1 = tile
     [0.5 * (lat0 + lat1), 0.5 * (lng0 + lng1)]
   end
 
   def tile
-    lat0 = -90.0
-    lat1 =  90.0
-    lng0 = -180.0
-    lng1 =  180.0
+    lat0 = min_lat
+    lat1 = max_lat
+    lng0 = min_lng
+    lng1 = max_lng
 
     (num_bits - 1).downto(0) do |i|
       if i.odd?
@@ -173,4 +196,5 @@ class Proxihash
 
   PoleWrapException = Class.new(ArgumentError)
   self.radius = :earth_in_kilometers
+  self.angular_units = :degrees
 end
