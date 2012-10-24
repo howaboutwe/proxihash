@@ -89,8 +89,12 @@ class Proxihash
 
       if (min_bits = options[:min_bits]) && bits < min_bits
         return nil
+      elsif (max_bits = options[:max_bits]) && bits > max_bits
+        # TODO: avoid unnecessary neighboring tiles
+        bits = max_bits
       end
 
+      # TODO: can use the next 2 bits to determine quadrant instead
       center = encode(lat, lng, bits)
       tile_lat, tile_lng = center.decode
       dlat = lat < tile_lat ? -1 : 1

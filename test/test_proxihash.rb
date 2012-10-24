@@ -91,8 +91,31 @@ describe Proxihash do
     end
 
     describe "when :min_bits is given" do
-      it "returns nil if the hashes are too short" do
+      it "returns nil if the hashes would be too short" do
         Proxihash.search_tiles(0, 0, 20, min_bits: 21).must_be_nil
+      end
+
+      it "does not return nil if the hashes are ok" do
+        center = Proxihash.new(0x7ffff, 21)
+        Proxihash.search_tiles(0, 0, 19, max_bits: 21).to_set.must_equal Set[
+          center, center.neighbor(1, 0), center.neighbor(1, 1), center.neighbor(0, 1)
+        ]
+      end
+    end
+
+    describe "when :max_bits is given" do
+      it "caps the hash length if they would be too long" do
+        center = Proxihash.new(0x7ffff, 21)
+        Proxihash.search_tiles(0, 0, 0.01, max_bits: 21).to_set.must_equal Set[
+          center, center.neighbor(1, 0), center.neighbor(1, 1), center.neighbor(0, 1)
+        ]
+      end
+
+      it "does not cap the hash length if the hashes are ok" do
+        center = Proxihash.new(0x7ffff, 21)
+        Proxihash.search_tiles(0, 0, 19, max_bits: 21).to_set.must_equal Set[
+          center, center.neighbor(1, 0), center.neighbor(1, 1), center.neighbor(0, 1)
+        ]
       end
     end
   end
