@@ -98,8 +98,8 @@ does not return more than 4 tiles to accomodate a smaller tileset.
 
 ## Contributing
 
- * [Bug reports](https://github.com/oggy/howaboutwe/proxihash)
- * [Source](https://github.com/oggy/howaboutwe)
+ * [Bug reports](https://github.com/howaboutwe/proxihash/issues)
+ * [Source](https://github.com/howaboutwe/proxihash)
  * Patches: Fork on Github, send pull request.
    * Include tests where practical.
    * Leave the version alone, or bump it in a separate commit.
