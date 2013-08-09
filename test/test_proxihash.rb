@@ -21,6 +21,13 @@ describe Proxihash do
     end
   end
 
+  describe '#id' do
+    it "returns the value prefixed with a 1-bit to uniquify it across precisions" do
+      proxihash = Proxihash.new(0b011, 3)
+      proxihash.id.must_equal 0b1011
+    end
+  end
+
   describe '.encode' do
     it "returns a proxihash for the given lat/lng at the given precision" do
       Proxihash.encode(0, 0, 9).must_equal Proxihash.new(0b001111111, 9)

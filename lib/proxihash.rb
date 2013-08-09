@@ -12,6 +12,10 @@ class Proxihash
 
   attr_reader :value, :num_bits
 
+  def id
+    value | 1 << num_bits
+  end
+
   class << self
     def radius=(radius)
       @radius =
