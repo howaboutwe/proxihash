@@ -125,6 +125,12 @@ describe Proxihash do
         ]
       end
     end
+
+    describe "when the search circle overlaps a pole" do
+      it "returns nil" do
+        Proxihash.search_tiles(89.999, 0, 100).must_be_nil
+      end
+    end
   end
 
   describe '.lng_bits' do

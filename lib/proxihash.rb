@@ -109,6 +109,8 @@ class Proxihash
         center.neighbor(dlat, dlng),
         center.neighbor(dlat,    0),
       ]
+    rescue PoleWrapException
+      nil
     end
 
     private
